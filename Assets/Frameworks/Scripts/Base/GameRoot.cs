@@ -1,18 +1,13 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GameRoot : MonoBehaviour
+namespace Frameworks
 {
-    // Start is called before the first frame update
-    void Start()
+    public class GameRoot : SingletonMono<GameRoot>
     {
         
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        public string STR = "testGameRoot";
     }
 }
