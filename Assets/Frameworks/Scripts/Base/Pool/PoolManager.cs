@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -30,7 +31,7 @@ namespace Frameworks
 
         #region GameObject
 
-        public T GetComponent<T>(GameObject prefab, Transform parent = null) where T : Object
+        public T GetComponent<T>(GameObject prefab, Transform parent = null) where T : UnityEngine.Object
         {
             GameObject obj = GetGameObject(prefab, parent);
             if (obj != null) return obj.GetComponent<T>();
@@ -102,10 +103,59 @@ namespace Frameworks
 
         #endregion
 
-        public void Clear(bool isClearObject = true)
+        #region Delete
+
+        public void Clear(bool isClearGameObject = true, bool isClearObject = true)
         {
-            goPoolDic.Clear();
+            if (isClearObject)
+            {
+                for (int i = poolRoot.transform.childCount - 1; i >= 0; i--)
+                {
+                    Destroy(poolRoot.transform.GetChild(i).gameObject);
+                }
+
+                goPoolDic.Clear();
+            }
+
             if (isClearObject) objectPoolDic.Clear();
         }
+
+        public void ClearAllGameObject()
+        {
+            Clear(true, false);
+        }
+
+        public void ClearGameObject(GameObject prefab)
+        {
+            ClearGameObject(prefab.name);
+        }
+
+        public void ClearGameObject(string prefabName)
+        {
+            // Find拿到null无法拿到gameObject
+            Transform trans = poolRoot.transform.Find(prefabName);
+            if (trans != null)
+            {
+                Destroy(trans.gameObject);
+                goPoolDic.Remove(prefabName);
+            }
+        }
+
+        public void ClearAllObject()
+        {
+            Clear(false);
+        }
+
+        public void ClearObject<T>()
+        {
+            objectPoolDic.Remove(typeof(T).CSharpFullName());
+        }
+
+        public void ClearObject(Type type)
+        {
+            objectPoolDic.Remove(type.CSharpFullName());
+        }
+
+        #endregion
     }
 }
