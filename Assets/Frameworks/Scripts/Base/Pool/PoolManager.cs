@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Frameworks
@@ -6,38 +7,48 @@ namespace Frameworks
     public class PoolManager : ManagerBase<PoolManager>
     {
         // 游戏物体根节点
-        [SerializeField] private GameObject poolRoot;
+        private GameObject poolRoot;
 
         // 对象容器 <名称，数据>
-        private Dictionary<string, GameObjectPoolData> goPoolDic = new Dictionary<string, GameObjectPoolData>();
+        private Dictionary<string, GameObjectPoolData> goPoolDic;
+
+        // 普通类容器
+        private Dictionary<string, ObjectPoolData> objectPoolDic;
 
 
         public override void Init()
         {
             base.Init();
             print("== Debug in PoolManager Init ==");
+            goPoolDic = new Dictionary<string, GameObjectPoolData>();
+            objectPoolDic = new Dictionary<string, ObjectPoolData>();
+            // 创建根节点
+            poolRoot = new GameObject("Pool");
+            poolRoot.transform.SetParent(GameRoot.Instance.transform);
         }
 
 
-        public T GetGameObject<T>(GameObject prefab) where T : Object
+        #region GameObject
+
+        public T GetComponent<T>(GameObject prefab, Transform parent = null) where T : Object
         {
-            GameObject obj = GetGameObject(prefab);
+            GameObject obj = GetGameObject(prefab, parent);
             if (obj != null) return obj.GetComponent<T>();
             return null;
         }
 
-        public GameObject GetGameObject(GameObject prefab)
+        public GameObject GetGameObject(GameObject prefab, Transform parent = null)
         {
             GameObject obj = null;
 
             string prefabName = prefab.name;
             if (CheckGameObjectCache(prefabName))
             {
-                obj = goPoolDic[prefabName].GetObj();
+                obj = goPoolDic[prefabName].GetObj(parent);
             }
             else
             {
-                obj = Instantiate(prefab);
+                obj = Instantiate(prefab, parent);
                 // 必要重命名
                 obj.name = prefabName;
             }
@@ -45,35 +56,56 @@ namespace Frameworks
             return obj;
         }
 
-
         public void PushGameObject(GameObject obj)
         {
             string keyName = obj.name;
-            if (goPoolDic.ContainsKey(keyName))
-            {
-                goPoolDic[keyName].PushObj(obj);
-            }
+            if (goPoolDic.TryGetValue(keyName, out GameObjectPoolData poolData))
+                poolData.PushObj(obj);
             else
-            {
                 goPoolDic.Add(keyName, new GameObjectPoolData(obj, poolRoot));
-            }
         }
-
 
         /// check has prefab,isNull create a new Prefab
-        public bool CheckGameObjectCache(GameObject prefab)
-        {
-            return CheckGameObjectCache(prefab.name);
-        }
-
         private bool CheckGameObjectCache(string keyName)
         {
             return goPoolDic.ContainsKey(keyName) && goPoolDic[keyName].IsEmpty();
         }
 
-        public void Clear()
+        #endregion
+
+        #region Object
+
+        public T GetObject<T>() where T : class, new()
+        {
+            // 相比 typeof(T).FullName 不需要判空
+            string keyName = typeof(T).CSharpFullName();
+            if (CheckObjectCache(keyName))
+                return (T)objectPoolDic[keyName].GetObj();
+            return new T();
+        }
+
+
+        public void PushObject(object o)
+        {
+            string keyName = o.GetType().CSharpFullName();
+            if (objectPoolDic.TryGetValue(keyName, out ObjectPoolData poolData))
+                poolData.PushObj(o);
+            else
+                objectPoolDic.Add(keyName, new ObjectPoolData(o));
+        }
+
+
+        private bool CheckObjectCache(string keyName)
+        {
+            return objectPoolDic.ContainsKey(keyName) && objectPoolDic[keyName].IsEmpty();
+        }
+
+        #endregion
+
+        public void Clear(bool isClearObject = true)
         {
             goPoolDic.Clear();
+            if (isClearObject) objectPoolDic.Clear();
         }
     }
 }
