@@ -107,13 +107,10 @@ namespace Frameworks
 
         public void Clear(bool isClearGameObject = true, bool isClearObject = true)
         {
-            if (isClearObject)
+            if (isClearGameObject)
             {
                 for (int i = poolRoot.transform.childCount - 1; i >= 0; i--)
-                {
                     Destroy(poolRoot.transform.GetChild(i).gameObject);
-                }
-
                 goPoolDic.Clear();
             }
 
